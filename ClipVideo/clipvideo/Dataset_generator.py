@@ -58,7 +58,13 @@ def vidio_recognizing_to_get_srt_list():
         try:
             wav = librosa.load(video_path, sr=16000)[0]
             res_text, res_srt, state = video_tools.recog((16000, wav))
-            state_json.update({str(video_path): state})
+            audio_path = r"H:\git\Dataset_Generator_For_VITS\ClipVideo\clipvideo\org_wav\3-44100.wav"
+            wav_44100 = librosa.load(audio_path, sr=44100)[0]
+            data = wav_44100
+            if len(data.shape) == 2:
+                data = data[:, 0]
+            state['audio_input'] = (44100, data)
+            state_json.update({str(audio_path): state})
         except Exception as e:
             print(f"音频转译错误 {video_path}: {e}")
             continue
@@ -113,6 +119,8 @@ def clip_audio_from_srt():
         return None
     for wav_file_path in all_srt_text_json:
         for one_line_text in all_srt_text_json[wav_file_path]:
+            audio_path = r"H:\git\Dataset_Generator_For_VITS\ClipVideo\clipvideo\org_wav\3-44100.wav"
+            wav_file_path = audio_path
             state = state_json[str(wav_file_path)]
             wav_file_name = OUTPUT_WAV_FILE + str(one_line_text) + '_clip.wav'
             try:
@@ -121,7 +129,8 @@ def clip_audio_from_srt():
                                                                 state=state)
                 if "No period found in the speech" not in message:
                     print(f"{one_line_text} in {wav_file_path} 完成")
-                    sf.write(wav_file_name, audio, 16000)
+                    # sf.write(wav_file_name, audio, 16000)
+                    sf.write(wav_file_name, audio, 44100)
             except Exception as e:
                 print(f"{one_line_text} in {wav_file_path}切割失败，原因：{e}")
 
@@ -166,9 +175,9 @@ def ready_all_to_wav():
 
 # 润！
 def run():
-    clean_files()
+    # clean_files()
     ready_all_to_wav()
-    demucs_wav()
+    # demucs_wav()
     clip_audio_from_srt()
 
 

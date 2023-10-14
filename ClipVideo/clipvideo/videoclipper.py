@@ -27,7 +27,7 @@ class VideoClipper():
         assert sr == 16000, "16kHz sample rate required, {} given.".format(sr)
         if len(data.shape) == 2:  # multi-channel wav input
             # logging.warning("Input wav shape: {}, only first channel reserved.").format(data.shape)
-            data = data[:,0]
+            data = data[:, 0]
         state['audio_input'] = (sr, data)
         data = data.astype(np.float64)
         rec_result = self.asr_pipeline(audio_in=data)
@@ -57,19 +57,21 @@ class VideoClipper():
         clip_srt = ""
         if len(ts):
             start, end = ts[0]
-            start = min(max(0, start+start_ost*16), len(data))
-            end = min(max(0, end+end_ost*16), len(data))
+            start, end = int(start * 2.75625), int(end * 2.75625)
+            start = min(max(0, start + start_ost * 16), len(data))
+            end = min(max(0, end + end_ost * 16), len(data))
             res_audio = data[start:end]
-            start_end_info = "from {} to {}".format(start/16000, end/16000)
-            srt_clip, _, srt_index = generate_srt_clip(sentences, start/16000.0, end/16000.0, begin_index=srt_index)
+            start_end_info = "from {} to {}".format(start / 44100, end / 44100)
+            srt_clip, _, srt_index = generate_srt_clip(sentences, start / 44100.0, end / 44100.0, begin_index=srt_index)
             clip_srt += srt_clip
             for _ts in ts[1:]:  # multiple sentence input or multiple output matched
                 start, end = _ts
-                start = min(max(0, start+start_ost*16), len(data))
-                end = min(max(0, end+end_ost*16), len(data))
+                start = min(max(0, start + start_ost * 16), len(data))
+                end = min(max(0, end + end_ost * 16), len(data))
                 start_end_info += ", from {} to {}".format(start, end)
-                res_audio = np.concatenate([res_audio, data[start+start_ost*16:end+end_ost*16]], -1)
-                srt_clip, _, srt_index = generate_srt_clip(sentences, start/16000.0, end/16000.0, begin_index=srt_index-1)
+                res_audio = np.concatenate([res_audio, data[start + start_ost * 16:end + end_ost * 16]], -1)
+                srt_clip, _, srt_index = generate_srt_clip(sentences, start / 44100.0, end / 44100.0,
+                                                           begin_index=srt_index - 1)
                 clip_srt += srt_clip
         if len(ts):
             message = "{} periods found in the speech: ".format(len(ts)) + start_end_info
@@ -102,7 +104,7 @@ class VideoClipper():
         video = state['video']
         clip_video_file = state['clip_video_file']
         vedio_filename = state['vedio_filename']
-        
+
         all_ts = []
         srt_index = 0
         time_acc_ost = 0.0
@@ -114,30 +116,34 @@ class VideoClipper():
         clip_srt = ""
         if len(ts):
             start, end = ts[0][0] / 16000, ts[0][1] / 16000
-            srt_clip, subs, srt_index = generate_srt_clip(sentences, start, end, begin_index=srt_index, time_acc_ost=time_acc_ost)
-            start, end = start+start_ost/1000.0, end+end_ost/1000.0
+            srt_clip, subs, srt_index = generate_srt_clip(sentences, start, end, begin_index=srt_index,
+                                                          time_acc_ost=time_acc_ost)
+            start, end = start + start_ost / 1000.0, end + end_ost / 1000.0
             video_clip = video.subclip(start, end)
             start_end_info = "from {} to {}".format(start, end)
             clip_srt += srt_clip
             if add_sub:
-                generator = lambda txt: TextClip(txt, font='./font/STHeitiMedium.ttc', fontsize=font_size, color=font_color)
+                generator = lambda txt: TextClip(txt, font='./font/STHeitiMedium.ttc', fontsize=font_size,
+                                                 color=font_color)
                 subtitles = SubtitlesClip(subs, generator)
-                video_clip = CompositeVideoClip([video_clip, subtitles.set_pos(('center','bottom'))])
+                video_clip = CompositeVideoClip([video_clip, subtitles.set_pos(('center', 'bottom'))])
             concate_clip = [video_clip]
-            time_acc_ost += end+end_ost/1000.0 - (start+start_ost/1000.0)
+            time_acc_ost += end + end_ost / 1000.0 - (start + start_ost / 1000.0)
             for _ts in ts[1:]:
                 start, end = _ts[0] / 16000, _ts[1] / 16000
-                srt_clip, subs, srt_index = generate_srt_clip(sentences, start, end, begin_index=srt_index-1, time_acc_ost=time_acc_ost)
-                start, end = start+start_ost/1000.0, end+end_ost/1000.0
+                srt_clip, subs, srt_index = generate_srt_clip(sentences, start, end, begin_index=srt_index - 1,
+                                                              time_acc_ost=time_acc_ost)
+                start, end = start + start_ost / 1000.0, end + end_ost / 1000.0
                 _video_clip = video.subclip(start, end)
                 start_end_info += ", from {} to {}".format(start, end)
                 clip_srt += srt_clip
                 if add_sub:
-                    generator = lambda txt: TextClip(txt, font='./font/STHeitiMedium.ttc', fontsize=font_size, color=font_color)
+                    generator = lambda txt: TextClip(txt, font='./font/STHeitiMedium.ttc', fontsize=font_size,
+                                                     color=font_color)
                     subtitles = SubtitlesClip(subs, generator)
-                    _video_clip = CompositeVideoClip([_video_clip, subtitles.set_pos(('center','bottom'))])
+                    _video_clip = CompositeVideoClip([_video_clip, subtitles.set_pos(('center', 'bottom'))])
                 concate_clip.append(copy.copy(_video_clip))
-                time_acc_ost += end+end_ost/1000.0 - (start+start_ost/1000.0)
+                time_acc_ost += end + end_ost / 1000.0 - (start + start_ost / 1000.0)
             message = "{} periods found in the audio: ".format(len(ts)) + start_end_info
             logging.warning("Concating...")
             if len(concate_clip) > 1:
